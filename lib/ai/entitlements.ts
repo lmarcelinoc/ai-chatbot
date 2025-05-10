@@ -3,7 +3,7 @@ import type { ChatModel } from './models';
 
 interface Entitlements {
   maxMessagesPerDay: number;
-  availableChatModelIds: Array<ChatModel['id']>;
+  availableChatModelIds: Array<string>;
 }
 
 export const entitlementsByUserType: Record<UserType, Entitlements> = {
@@ -12,7 +12,14 @@ export const entitlementsByUserType: Record<UserType, Entitlements> = {
    */
   guest: {
     maxMessagesPerDay: 20,
-    availableChatModelIds: ['openai-gpt4o', 'xai-grok2'],
+    availableChatModelIds: [
+      // Default models
+      'openai-gpt4o', 'xai-grok2',
+      // Database models (will be UUIDs)
+      // Adding wildcards to match any model ID pattern
+      // The model component will filter these based on actual available models
+      '*'
+    ],
   },
 
   /*
@@ -21,12 +28,17 @@ export const entitlementsByUserType: Record<UserType, Entitlements> = {
   regular: {
     maxMessagesPerDay: 100,
     availableChatModelIds: [
+      // Default models
       'openai-gpt4o', 
       'openai-o3mini', 
       'openai-reasoning',
       'xai-grok2', 
       'xai-grok2-vision', 
-      'xai-grok3-mini'
+      'xai-grok3-mini',
+      // Database models (will be UUIDs)
+      // Adding wildcards to match any model ID pattern
+      // The model component will filter these based on actual available models
+      '*'
     ],
   },
 

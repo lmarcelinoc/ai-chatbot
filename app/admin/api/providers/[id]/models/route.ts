@@ -28,7 +28,8 @@ export async function GET(
       );
     }
 
-    const providerId = params.id;
+    // Properly destructure the id from params
+    const { id: providerId } = params;
     const provider = await getProviderById(providerId);
 
     if (!provider) {
@@ -63,7 +64,8 @@ export async function POST(
       );
     }
 
-    const providerId = params.id;
+    // Properly destructure the id from params
+    const { id: providerId } = params;
     const provider = await getProviderById(providerId);
 
     if (!provider) {

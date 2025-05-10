@@ -23,7 +23,7 @@ export async function GET(
       );
     }
 
-    const providerId = params.id;
+    const { id: providerId } = params;
     const provider = await getProviderById(providerId);
 
     if (!provider) {
@@ -57,7 +57,7 @@ export async function PATCH(
       );
     }
 
-    const providerId = params.id;
+    const { id: providerId } = params;
     const provider = await getProviderById(providerId);
 
     if (!provider) {

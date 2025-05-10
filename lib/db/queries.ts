@@ -822,6 +822,7 @@ export async function getSystemSettings(): Promise<SystemSettings | null> {
 export async function updateSystemSettings(updates: {
   allowGuestUsers?: boolean;
   allowRegistration?: boolean;
+  braveSearchApiKey?: string;
 }): Promise<SystemSettings[]> {
   try {
     // Get the current settings record or create one if it doesn't exist

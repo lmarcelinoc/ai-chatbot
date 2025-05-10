@@ -23,7 +23,7 @@ export async function PATCH(
       );
     }
 
-    const modelId = params.id;
+    const { id: modelId } = params;
     const updates = await request.json();
 
     // Validate updates

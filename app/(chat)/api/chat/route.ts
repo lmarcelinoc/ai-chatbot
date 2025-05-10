@@ -4,6 +4,7 @@ import {
   createDataStream,
   smoothStream,
   streamText,
+  type LanguageModelV1
 } from 'ai';
 import { auth, type UserType } from '@/app/(auth)/auth';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
@@ -17,6 +18,7 @@ import {
   getStreamIdsByChatId,
   saveChat,
   saveMessages,
+  getProviderById,
 } from '@/lib/db/queries';
 import { generateUUID, getTrailingMessageId } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '../../actions';
@@ -24,8 +26,10 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
+import { braveSearch } from '@/lib/ai/tools/brave-search';
 import { isProductionEnvironment } from '@/lib/constants';
-import { myProvider } from '@/lib/ai/providers';
+import { myProvider, getDynamicLanguageModel, getProviderModel } from '@/lib/ai/providers';
+import { openai } from '@ai-sdk/openai';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
 import { geolocation } from '@vercel/functions';
@@ -35,7 +39,11 @@ import {
 } from 'resumable-stream';
 import { after } from 'next/server';
 import type { Chat } from '@/lib/db/schema';
+import { db } from '@/lib/db';
+import { eq } from 'drizzle-orm';
+import { providerModel } from '@/lib/db/schema';
 import { differenceInSeconds } from 'date-fns';
+import { anthropic } from '@ai-sdk/anthropic';
 
 export const maxDuration = 60;
 
@@ -73,6 +81,65 @@ function getStreamContext() {
   }
 
   return globalStreamContext;
+}
+
+// Helper function to get the appropriate model for a chat
+async function getModelForChat(modelId: string, message: any): Promise<LanguageModelV1> {
+  console.log(`Getting model for chat: ${modelId}`);
+  
+  // Check if message has PDF or document attachments
+  const hasPDFAttachment = message.experimental_attachments?.some(
+    (a: any) => a.contentType === 'application/pdf'
+  );
+  
+  // If there's a PDF, prefer a provider that handles PDFs well (like Anthropic)
+  if (hasPDFAttachment) {
+    console.log('Message contains PDF, using model with PDF capability');
+    try {
+      // Try to use Anthropic's Claude model which handles PDFs well
+      return anthropic ? 
+        anthropic('claude-3.5-sonnet-20241022') : 
+        openai('gpt-4o'); // Fallback to GPT-4o if anthropic not available
+    } catch (error) {
+      console.error('Error using PDF-capable model:', error);
+    }
+  }
+  
+  // First try using the dynamic model loader
+  try {
+    console.log(`Attempting to use dynamic model loader for: ${modelId}`);
+    return getDynamicLanguageModel(modelId);
+  } catch (error) {
+    console.error('Error using dynamic model loader:', error);
+  }
+  
+  // If the model ID looks like a UUID, try to look up the provider and model in the database
+  if (modelId.includes('-') && modelId.length > 30) {
+    console.log(`Model ID ${modelId} looks like a UUID, trying database lookup`);
+    try {
+      const dbModel = await db.select().from(providerModel).where(eq(providerModel.id, modelId)).limit(1);
+      
+      if (dbModel.length > 0) {
+        const model = dbModel[0];
+        console.log(`Found model in database: ${JSON.stringify(model)}`);
+        const provider = await getProviderById(model.providerId);
+        console.log(`Provider for model: ${JSON.stringify(provider)}`);
+        
+        if (provider && provider.slug) {
+          console.log(`Using provider ${provider.slug} with model ID ${model.modelId}`);
+          return getProviderModel(provider.slug, model.modelId);
+        }
+      } else {
+        console.log(`No database model found for ID: ${modelId}`);
+      }
+    } catch (dbError) {
+      console.error('Database error looking up model:', dbError);
+    }
+  }
+  
+  // Fallback to a default model
+  console.warn(`Falling back to default model for ${modelId}`);
+  return openai('gpt-4o');
 }
 
 export async function POST(request: Request) {
@@ -175,10 +242,13 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
+    // Get the model before creating the data stream
+    const model = await getModelForChat(selectedChatModel, message);
+
     const stream = createDataStream({
       execute: (dataStream) => {
         const result = streamText({
-          model: myProvider.languageModel(selectedChatModel),
+          model,
           system: systemPrompt({
             selectedChatModel,
             requestHints,
@@ -196,6 +266,7 @@ export async function POST(request: Request) {
                   'createDocument',
                   'updateDocument',
                   'requestSuggestions',
+                  'braveSearch',
                 ],
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
@@ -207,6 +278,7 @@ export async function POST(request: Request) {
               session,
               dataStream,
             }),
+            braveSearch,
           },
           onFinish: async ({ response }) => {
             if (session.user?.id) {

@@ -18,23 +18,32 @@ export const postRequestBodySchema = z.object({
         z.object({
           url: z.string().url(),
           name: z.string().min(1).max(2000),
-          contentType: z.enum(['image/png', 'image/jpg', 'image/jpeg']),
+          contentType: z.enum(['image/png', 'image/jpg', 'image/jpeg', 'application/pdf']),
         }),
       )
       .optional(),
   }),
-  selectedChatModel: z.enum([
-    // Legacy model IDs
-    'chat-model', 
-    'chat-model-reasoning',
-    // OpenAI models
-    'openai-gpt4o',
-    'openai-o3mini',
-    'openai-reasoning',
-    // xAI models
-    'xai-grok2',
-    'xai-grok2-vision',
-    'xai-grok3-mini'
+  selectedChatModel: z.union([
+    z.enum([
+      // Legacy model IDs
+      'chat-model', 
+      'chat-model-reasoning',
+      // OpenAI models
+      'openai-gpt4o',
+      'openai-o3mini',
+      'openai-reasoning',
+      // xAI models
+      'xai-grok2',
+      'xai-grok2-vision',
+      'xai-grok3-mini',
+      // Anthropic models
+      'anthropic-claude-3-5-sonnet',
+      'anthropic-claude-3-5-haiku',
+      'anthropic-claude-3-opus',
+      'anthropic-claude-instant'
+    ]),
+    // Support for database model IDs (UUIDs)
+    z.string().uuid()
   ]),
   selectedVisibilityType: z.enum(['public', 'private']),
 });

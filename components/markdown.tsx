@@ -8,6 +8,20 @@ const components: Partial<Components> = {
   // @ts-expect-error
   code: CodeBlock,
   pre: ({ children }) => <>{children}</>,
+  p: ({ node, children, ...props }) => {
+    const hasBlockElement = React.Children.toArray(children).some((child) => {
+      return React.isValidElement(child) && 
+        ['pre', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ol', 'ul'].includes(
+          (child.type as any)?.name || (child.type as any) || ''
+        );
+    });
+
+    if (hasBlockElement) {
+      return <>{children}</>;
+    }
+
+    return <p {...props}>{children}</p>;
+  },
   ol: ({ node, children, ...props }) => {
     return (
       <ol className="list-decimal list-outside ml-4" {...props}>

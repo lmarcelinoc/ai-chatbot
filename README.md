@@ -60,3 +60,32 @@ pnpm dev
 ```
 
 Your app template should now be running on [localhost:3000](http://localhost:3000).
+
+## Brave Search API Integration
+
+This project includes integration with the Brave Search API to provide web search capabilities in the chatbot.
+
+### Setup
+
+1. Get a Brave Search API key from [Brave Search API](https://brave.com/search/api/)
+2. Add your API key to your `.env.local` file:
+   ```
+   BRAVE_SEARCH_API_KEY=your_brave_search_api_key
+   ```
+   
+   Or configure it in the admin dashboard settings page.
+
+### Usage
+
+Once configured, the AI will be able to search the web for information in response to user queries. This is useful for:
+
+* Getting real-time information that might not be in the AI's training data
+* Retrieving specific facts or details
+* Answering questions about current events
+
+To use the search functionality, simply ask questions that would benefit from web search, like:
+- "What's happening with the latest SpaceX launch?"
+- "Find information about the new MacBook Pro specifications"
+- "What are the trending AI technologies in 2024?"
+
+The chatbot will automatically decide when to use the search capability.
