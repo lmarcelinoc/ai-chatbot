@@ -25,10 +25,7 @@ interface ProviderData {
 }
 
 interface ModelsResponse {
-  providers: {
-    openai: ProviderData;
-    xai: ProviderData;
-  };
+  providers: Record<string, ProviderData>;
   error: string | null;
 }
 
@@ -54,13 +51,16 @@ export function ModelSelector({
       setError(null);
       
       try {
+        console.log('Fetching models...');
         const response = await fetch('/api/models');
+        console.log('API Response status:', response.status);
         
         if (!response.ok) {
           throw new Error(`API responded with status ${response.status}`);
         }
         
         const data: ModelsResponse = await response.json();
+        console.log('API Response data:', data);
         
         if (data.error) {
           throw new Error(data.error);
@@ -86,20 +86,39 @@ export function ModelSelector({
     if (providersData) {
       // Flatten all models from all providers
       const allModels = Object.values(providersData).flatMap(provider => provider.models);
-      // Filter by user's entitlements
-      return allModels.filter(model => availableChatModelIds.includes(model.id));
+      
+      // Check if user has wildcard access
+      const hasWildcardAccess = availableChatModelIds.includes('*');
+      
+      if (hasWildcardAccess) {
+        // If wildcard is included, return all models
+        return allModels;
+      } else {
+        // Filter by user's entitlements
+        return allModels.filter(model => availableChatModelIds.includes(model.id));
+      }
     } else {
-      // Fall back to static list
-      return chatModels.filter(model => availableChatModelIds.includes(model.id));
+      // Check if user has wildcard access
+      const hasWildcardAccess = availableChatModelIds.includes('*');
+      
+      if (hasWildcardAccess) {
+        // If wildcard is included, return all static models
+        return chatModels;
+      } else {
+        // Fall back to static list filtered by entitlements
+        return chatModels.filter(model => availableChatModelIds.includes(model.id));
+      }
     }
   }, [providersData, availableChatModelIds]);
 
   // Group models by provider
   const modelsByProvider = useMemo(() => {
     if (providersData) {
+      // If we have provider data from the API, use that directly
+      // Initialize with empty arrays for each provider
       const result: Record<string, { name: string, models: ChatModel[] }> = {};
       
-      // Initialize with empty arrays for each provider
+      // First collect all provider information
       Object.keys(providersData).forEach(providerId => {
         result[providerId] = { 
           name: providersData[providerId].name,
@@ -107,23 +126,37 @@ export function ModelSelector({
         };
       });
       
-      // Populate with available models
+      // Then populate with available models
       availableModels.forEach(model => {
-        if (result[model.provider]) {
+        if (model.provider && result[model.provider]) {
           result[model.provider].models.push(model);
+        } else {
+          // For models with unknown providers, add to a generic group
+          if (!result['other']) {
+            result['other'] = { name: 'Other Models', models: [] };
+          }
+          result['other'].models.push(model);
         }
       });
       
       return result;
     } else {
-      // Fall back to static grouping
-      const grouped: Record<string, { name: string, models: ChatModel[] }> = {
-        openai: { name: 'OpenAI', models: [] },
-        xai: { name: 'xAI', models: [] }
-      };
+      // When falling back to static data, group models by their provider property
+      const grouped: Record<string, { name: string, models: ChatModel[] }> = {};
       
+      // Group by known provider types
       availableModels.forEach(model => {
-        grouped[model.provider].models.push(model);
+        const provider = model.provider || 'unknown';
+        
+        if (!grouped[provider]) {
+          // Use the helper function to get a friendly display name
+          grouped[provider] = { 
+            name: getProviderDisplayName(provider), 
+            models: [] 
+          };
+        }
+        
+        grouped[provider].models.push(model);
       });
       
       return grouped;
@@ -230,3 +263,19 @@ function ModelMenuItem({
     </DropdownMenuItem>
   );
 }
+
+// Update the provider name mapping to use string type instead of specific literals
+const getProviderDisplayName = (providerSlug: string): string => {
+  const providerNames: Record<string, string> = {
+    'openai': 'OpenAI',
+    'xai': 'xAI',
+    'anthropic': 'Anthropic',
+    'google': 'Google',
+    'mistral': 'Mistral AI',
+    'cohere': 'Cohere',
+    'aws': 'Amazon Bedrock',
+    'azure': 'Azure OpenAI'
+  };
+  
+  return providerNames[providerSlug] || providerSlug;
+};
