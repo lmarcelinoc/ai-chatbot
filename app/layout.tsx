@@ -1,7 +1,8 @@
 import { Toaster } from 'sonner';
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Inter as FontSans } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme-provider';
+import './client-init.js';
 
 import './globals.css';
 import { SessionProvider } from 'next-auth/react';
@@ -17,16 +18,10 @@ export const viewport = {
   maximumScale: 1, // Disable auto-zoom on mobile Safari
 };
 
-const geist = Geist({
+// Define fonts
+const fontSans = FontSans({
   subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-geist',
-});
-
-const geistMono = Geist_Mono({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-geist-mono',
+  variable: '--font-sans',
 });
 
 const LIGHT_THEME_COLOR = 'hsl(0 0% 100%)';
@@ -62,7 +57,7 @@ export default async function RootLayout({
       // prop is necessary to avoid the React hydration mismatch warning.
       // https://github.com/pacocoursey/next-themes?tab=readme-ov-file#with-app
       suppressHydrationWarning
-      className={`${geist.variable} ${geistMono.variable}`}
+      className={fontSans.variable}
     >
       <head>
         <script

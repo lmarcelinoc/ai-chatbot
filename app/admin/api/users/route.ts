@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import 'server-only';
 import { NextResponse } from 'next/server';
 import { hash } from 'bcrypt';
@@ -15,7 +16,7 @@ const db = drizzle(client);
 // Helper to check if the current user is an admin
 async function isAdmin() {
   const session = await auth();
-  return session?.user?.role === 'admin';
+  return (session?.user as { role?: string })?.role === 'admin';
 }
 
 // GET /admin/api/users - Get all users

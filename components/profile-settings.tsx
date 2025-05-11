@@ -93,6 +93,8 @@ export function ProfileSettings() {
   // Fetch user settings on component mount
   useEffect(() => {
     fetchSettings();
+    // fetchSettings is defined in the component body so it needs to be a dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchSettings() {
@@ -176,7 +178,7 @@ export function ProfileSettings() {
     };
 
     // Convert optional fields, omitting empty strings
-    if (rawData.maxTokens && rawData.maxTokens !== '') {
+    if (rawData.maxTokens !== undefined && rawData.maxTokens !== '') {
       const value =
         typeof rawData.maxTokens === 'string'
           ? Number(rawData.maxTokens)
@@ -184,13 +186,16 @@ export function ProfileSettings() {
       data.maxTokens = value;
     }
 
-    if (rawData.topP && rawData.topP !== '') {
+    if (rawData.topP !== undefined && rawData.topP !== '') {
       const value =
         typeof rawData.topP === 'string' ? Number(rawData.topP) : rawData.topP;
       data.topP = value;
     }
 
-    if (rawData.frequencyPenalty && rawData.frequencyPenalty !== '') {
+    if (
+      rawData.frequencyPenalty !== undefined &&
+      rawData.frequencyPenalty !== ''
+    ) {
       const value =
         typeof rawData.frequencyPenalty === 'string'
           ? Number(rawData.frequencyPenalty)
@@ -198,7 +203,10 @@ export function ProfileSettings() {
       data.frequencyPenalty = value;
     }
 
-    if (rawData.presencePenalty && rawData.presencePenalty !== '') {
+    if (
+      rawData.presencePenalty !== undefined &&
+      rawData.presencePenalty !== ''
+    ) {
       const value =
         typeof rawData.presencePenalty === 'string'
           ? Number(rawData.presencePenalty)

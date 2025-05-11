@@ -4,8 +4,8 @@ import {
   wrapLanguageModel,
   type LanguageModelV1,
 } from 'ai';
-import { xai, type XaiProvider } from '@ai-sdk/xai';
-import { openai, type OpenAIProvider } from '@ai-sdk/openai';
+import { xai } from '@ai-sdk/xai';
+import { openai } from '@ai-sdk/openai';
 
 // Use a dynamic import approach for TypeScript type safety while maintaining compatibility
 let anthropic: any;
@@ -23,13 +23,13 @@ try {
 }
 
 import { isTestEnvironment } from '../constants';
+// Import safe mock models instead of test models
 import {
-  artifactModel,
-  chatModel,
-  reasoningModel,
-  titleModel,
-} from './models.test';
-import { chatModels, imageModels } from './models';
+  safeArtifactModel as artifactModel,
+  safeChatModel as chatModel,
+  safeReasoningModel as reasoningModel,
+  safeTitleModel as titleModel,
+} from './models';
 
 // Re-export openai and other providers for easy access
 export { openai, xai };
@@ -44,17 +44,23 @@ export const providerSDKs: Record<string, any> = {
 };
 
 // Get a model instance based on provider slug and model ID
-export function getProviderModel(providerSlug: string, modelId: string): LanguageModelV1 {
+export function getProviderModel(
+  providerSlug: string,
+  modelId: string,
+): LanguageModelV1 {
   if (providerSDKs[providerSlug]) {
     try {
       return providerSDKs[providerSlug](modelId);
     } catch (error) {
-      console.error(`Error creating model for ${providerSlug}/${modelId}:`, error);
+      console.error(
+        `Error creating model for ${providerSlug}/${modelId}:`,
+        error,
+      );
       // Fallback to OpenAI if there's an error
       return openai('gpt-4o');
     }
   }
-  
+
   // Default to OpenAI if provider not found
   console.warn(`Provider ${providerSlug} not found, falling back to OpenAI`);
   return openai('gpt-4o');
@@ -78,7 +84,7 @@ export const myProvider = isTestEnvironment
           model: openai('gpt-4o'),
           middleware: extractReasoningMiddleware({ tagName: 'think' }),
         }),
-        
+
         // xAI Models
         'xai-grok2': xai('grok-2-1212'),
         'xai-grok2-vision': xai('grok-2-vision-1212'),
@@ -86,13 +92,13 @@ export const myProvider = isTestEnvironment
           model: xai('grok-3-mini-beta'),
           middleware: extractReasoningMiddleware({ tagName: 'think' }),
         }),
-        
+
         // Anthropic/Claude models
         'anthropic-claude-3-5-sonnet': anthropic('claude-3.5-sonnet-20241022'),
         'anthropic-claude-3-5-haiku': anthropic('claude-3.5-haiku-20241022'),
         'anthropic-claude-3-opus': anthropic('claude-3-opus-20240229'),
         'anthropic-claude-instant': anthropic('claude-instant-1.2'),
-        
+
         // Legacy model IDs (for backward compatibility)
         'chat-model': openai('gpt-4o'),
         'chat-model-reasoning': wrapLanguageModel({
@@ -120,41 +126,48 @@ export function getImageModelForProvider(provider: string) {
 // Dynamic model loading for database models
 export function getDynamicLanguageModel(modelId: string): LanguageModelV1 {
   console.log(`[getDynamicLanguageModel] Attempting to load model: ${modelId}`);
-  
+
   // First check if it's a predefined model in myProvider
-  try {
+  // @ts-expect-error - Accessing internal languageModels property
+  if (myProvider.languageModels?.[modelId]) {
+    console.log(`[getDynamicLanguageModel] Found predefined model: ${modelId}`);
     // @ts-ignore - Accessing language models directly
-    if (myProvider.languageModels && myProvider.languageModels[modelId]) {
-      console.log(`[getDynamicLanguageModel] Found predefined model: ${modelId}`);
-      // @ts-ignore - Accessing language models directly
-      return myProvider.languageModels[modelId];
-    }
-  } catch (error) {
-    console.log(`[getDynamicLanguageModel] Error accessing predefined model: ${error}`);
-    // Ignore errors and continue to next approach
+    return myProvider.languageModels[modelId];
   }
-  
+
   // If model ID matches UUID pattern, it might be a database model
   // UUID pattern matching is simple here - could be more robust
   if (modelId.includes('-') && modelId.length > 30) {
-    console.log(`[getDynamicLanguageModel] Model ID ${modelId} appears to be a UUID`);
+    console.log(
+      `[getDynamicLanguageModel] Model ID ${modelId} appears to be a UUID`,
+    );
     try {
       // For database models, we would ideally query the database here
       // Since we can't do that directly, use a fallback OpenAI model
-      console.log(`[getDynamicLanguageModel] Using openai fallback for UUID: ${modelId}`);
+      console.log(
+        `[getDynamicLanguageModel] Using openai fallback for UUID: ${modelId}`,
+      );
       return openai('gpt-4o');
     } catch (error) {
-      console.error(`[getDynamicLanguageModel] Failed to create model for UUID ${modelId}:`, error);
+      console.error(
+        `[getDynamicLanguageModel] Failed to create model for UUID ${modelId}:`,
+        error,
+      );
       return openai('gpt-4o');
     }
   }
-  
+
   // For legacy model IDs that aren't in myProvider
   try {
-    console.log(`[getDynamicLanguageModel] Using legacy approach for: ${modelId}`);
+    console.log(
+      `[getDynamicLanguageModel] Using legacy approach for: ${modelId}`,
+    );
     return myProvider.languageModel('openai-gpt4o');
   } catch (error) {
-    console.error(`[getDynamicLanguageModel] All approaches failed for ${modelId}:`, error);
+    console.error(
+      `[getDynamicLanguageModel] All approaches failed for ${modelId}:`,
+      error,
+    );
     return openai('gpt-4o'); // Direct fallback
   }
 }

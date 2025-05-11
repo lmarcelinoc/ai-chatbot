@@ -14,9 +14,15 @@ import { ProfileSettings } from '@/components/profile-settings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import type { UserRole } from '@/app/(auth)/auth';
+
+// Extend the User type to include the role property
+interface ExtendedUser extends User {
+  role?: UserRole;
+}
 
 interface ProfileDialogProps {
-  user: User;
+  user: ExtendedUser;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -63,8 +69,8 @@ export function ProfileDialog({ user, isOpen, onClose }: ProfileDialogProps) {
                   API Key Management
                 </h3>
                 <p className="text-muted-foreground">
-                  This feature is coming soon. You'll be able to manage API keys
-                  for programmatic access.
+                  This feature is coming soon. You&apos;ll be able to manage API
+                  keys for programmatic access.
                 </p>
               </div>
             </TabsContent>

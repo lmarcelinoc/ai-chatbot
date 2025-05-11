@@ -4,7 +4,7 @@ import {
   createDataStream,
   smoothStream,
   streamText,
-  type LanguageModelV1
+  type LanguageModelV1,
 } from 'ai';
 import { auth, type UserType } from '@/app/(auth)/auth';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
@@ -28,7 +28,7 @@ import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 import { braveSearch } from '@/lib/ai/tools/brave-search';
 import { isProductionEnvironment } from '@/lib/constants';
-import { myProvider, getDynamicLanguageModel, getProviderModel } from '@/lib/ai/providers';
+import { myProvider, getDynamicLanguageModel } from '@/lib/ai/providers';
 import { openai } from '@ai-sdk/openai';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
@@ -37,7 +37,6 @@ import {
   createResumableStreamContext,
   type ResumableStreamContext,
 } from 'resumable-stream';
-import { after } from 'next/server';
 import type { Chat } from '@/lib/db/schema';
 import { db } from '@/lib/db';
 import { eq } from 'drizzle-orm';
@@ -62,13 +61,22 @@ function getStreamContext() {
         return null;
       }
 
+      // Use a workaround for the waitUntil requirement
+      const mockWaitUntil = (promise: Promise<any>) => {
+        // Just expose the promise but don't wait for it
+        promise.catch((error) => {
+          console.error('Error in mock waitUntil:', error);
+        });
+      };
+
+      // Provide the required waitUntil property with a mock implementation
       globalStreamContext = createResumableStreamContext({
-        waitUntil: after,
+        waitUntil: mockWaitUntil,
       });
     } catch (error: any) {
       console.error('Failed to initialize resumable streams:', error);
       if (
-        error.message.includes('REDIS_URL') ||
+        error.message?.includes('REDIS_URL') ||
         error.code === 'ERR_INVALID_URL'
       ) {
         console.log(
@@ -77,6 +85,7 @@ function getStreamContext() {
       } else {
         console.error(error);
       }
+      return null; // Explicitly return null on error
     }
   }
 
@@ -84,50 +93,121 @@ function getStreamContext() {
 }
 
 // Helper function to get the appropriate model for a chat
-async function getModelForChat(modelId: string, message: any): Promise<LanguageModelV1> {
+async function getModelForChat(
+  modelId: string,
+  message: any,
+): Promise<LanguageModelV1> {
   console.log(`Getting model for chat: ${modelId}`);
-  
-  // Check if message has PDF or document attachments
+
+  // Check for image generation requests
+  const isImageGenerationRequest =
+    message.content?.toLowerCase().includes('generate an image') ||
+    message.content?.toLowerCase().includes('create an image') ||
+    message.content?.toLowerCase().includes('draw') ||
+    message.content?.toLowerCase().includes('picture of');
+
+  if (isImageGenerationRequest) {
+    console.log('Detected image generation request, using appropriate model');
+    try {
+      // Depending on the provider requested, use the appropriate image model
+      if (modelId.includes('anthropic')) {
+        // Claude can handle image generation instructions textually
+        return anthropic('claude-3.5-sonnet-20241022');
+      } else if (modelId.includes('xai')) {
+        // Use xAI's model for image generation if available
+        return myProvider.languageModel('xai-grok2-vision');
+      } else {
+        // Default to OpenAI's model which has good image generation instructions
+        return openai('gpt-4o');
+      }
+    } catch (error) {
+      console.error('Error selecting image generation model:', error);
+    }
+  }
+
+  // Check if message has image or document attachments
+  const hasAttachments = message.experimental_attachments?.length > 0;
   const hasPDFAttachment = message.experimental_attachments?.some(
-    (a: any) => a.contentType === 'application/pdf'
+    (a: any) => a.contentType === 'application/pdf',
   );
-  
-  // If there's a PDF, prefer a provider that handles PDFs well (like Anthropic)
+  const hasImageAttachment = message.experimental_attachments?.some((a: any) =>
+    a.contentType?.startsWith('image/'),
+  );
+
+  // For PDF attachments, prefer a provider that handles PDFs well (like Anthropic)
   if (hasPDFAttachment) {
     console.log('Message contains PDF, using model with PDF capability');
     try {
       // Try to use Anthropic's Claude model which handles PDFs well
-      return anthropic ? 
-        anthropic('claude-3.5-sonnet-20241022') : 
-        openai('gpt-4o'); // Fallback to GPT-4o if anthropic not available
+      return anthropic('claude-3.5-sonnet-20241022');
     } catch (error) {
       console.error('Error using PDF-capable model:', error);
+      // Continue to other methods
     }
   }
-  
-  // First try using the dynamic model loader
+
+  // For image attachments, prefer a provider with strong vision capabilities
+  if (hasImageAttachment) {
+    console.log('Message contains images, using model with vision capability');
+    try {
+      // First try OpenAI GPT-4o for vision
+      return openai('gpt-4o');
+    } catch (error) {
+      console.error('Error using vision-capable model:', error);
+      // Continue to other methods
+    }
+  }
+
+  // First try using the dynamic model loader for the specific model ID
   try {
     console.log(`Attempting to use dynamic model loader for: ${modelId}`);
     return getDynamicLanguageModel(modelId);
   } catch (error) {
     console.error('Error using dynamic model loader:', error);
   }
-  
+
   // If the model ID looks like a UUID, try to look up the provider and model in the database
   if (modelId.includes('-') && modelId.length > 30) {
-    console.log(`Model ID ${modelId} looks like a UUID, trying database lookup`);
+    console.log(
+      `Model ID ${modelId} looks like a UUID, trying database lookup`,
+    );
     try {
-      const dbModel = await db.select().from(providerModel).where(eq(providerModel.id, modelId)).limit(1);
-      
+      const dbModel = await db
+        .select()
+        .from(providerModel)
+        .where(eq(providerModel.id, modelId))
+        .limit(1);
+
       if (dbModel.length > 0) {
         const model = dbModel[0];
-        console.log(`Found model in database: ${JSON.stringify(model)}`);
+        console.log(
+          `Found model in database: ${model.name} (${model.modelId})`,
+        );
         const provider = await getProviderById(model.providerId);
-        console.log(`Provider for model: ${JSON.stringify(provider)}`);
-        
-        if (provider && provider.slug) {
-          console.log(`Using provider ${provider.slug} with model ID ${model.modelId}`);
-          return getProviderModel(provider.slug, model.modelId);
+
+        if (provider?.slug) {
+          console.log(
+            `Using provider ${provider.slug} with model ID ${model.modelId}`,
+          );
+          // Handle each provider explicitly for better error handling
+          switch (provider.slug) {
+            case 'openai':
+              return openai(model.modelId);
+            case 'anthropic':
+              return anthropic(model.modelId);
+            case 'xai':
+              return myProvider.languageModel(
+                `xai-${model.modelId.split('-')[0]}`,
+              );
+            case 'google':
+              // If Google provider exists in your setup
+              return myProvider.languageModel('google-gemini');
+            default:
+              console.log(
+                `Unknown provider slug: ${provider.slug}, falling back to OpenAI`,
+              );
+              return openai('gpt-4o');
+          }
         }
       } else {
         console.log(`No database model found for ID: ${modelId}`);
@@ -136,7 +216,7 @@ async function getModelForChat(modelId: string, message: any): Promise<LanguageM
       console.error('Database error looking up model:', dbError);
     }
   }
-  
+
   // Fallback to a default model
   console.warn(`Falling back to default model for ${modelId}`);
   return openai('gpt-4o');
@@ -311,8 +391,8 @@ export async function POST(request: Request) {
                     },
                   ],
                 });
-              } catch (_) {
-                console.error('Failed to save chat');
+              } catch (err) {
+                console.error('Failed to save chat', err);
               }
             }
           },
@@ -324,22 +404,38 @@ export async function POST(request: Request) {
 
         result.consumeStream();
 
-        result.mergeIntoDataStream(dataStream, {
-          sendReasoning: true,
-        });
+        try {
+          result.mergeIntoDataStream(dataStream, {
+            sendReasoning: true,
+          });
+        } catch (err) {
+          console.error('Error merging stream:', err);
+          dataStream.writeData({
+            type: 'text',
+            text: 'Sorry, there was an error processing your request. Please try again.',
+          });
+        }
       },
-      onError: () => {
-        return 'Oops, an error occurred!';
+      onError: (err) => {
+        console.error('Data stream error:', err);
+        return 'Oops, an error occurred! Please try again.';
       },
     });
 
     const streamContext = getStreamContext();
 
     if (streamContext) {
-      return new Response(
-        await streamContext.resumableStream(streamId, () => stream),
-      );
+      try {
+        return new Response(
+          await streamContext.resumableStream(streamId, () => stream),
+        );
+      } catch (err) {
+        console.error('Error creating resumable stream:', err);
+        // Fall back to regular streaming if resumable fails
+        return new Response(stream);
+      }
     } else {
+      // If no stream context, just return the regular stream
       return new Response(stream);
     }
   } catch (error) {

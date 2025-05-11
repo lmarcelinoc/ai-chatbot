@@ -14,7 +14,7 @@ import {
 export const user = pgTable('User', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   email: varchar('email', { length: 64 }).notNull(),
-  password: varchar('password', { length: 64 }),
+  password: varchar('password', { length: 100 }),
   role: varchar('role', { enum: ['user', 'admin'] })
     .notNull()
     .default('user'),
@@ -246,3 +246,15 @@ export const systemSettings = pgTable('SystemSettings', {
 });
 
 export type SystemSettings = InferSelectModel<typeof systemSettings>;
+
+// Add embeddings table for document search functionality
+export const embeddings = pgTable('Embeddings', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  resourceId: uuid('resourceId').notNull(),
+  content: text('content').notNull(),
+  embedding: json('embedding'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+});
+
+export type Embeddings = InferSelectModel<typeof embeddings>;

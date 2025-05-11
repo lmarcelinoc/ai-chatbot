@@ -7,14 +7,14 @@ import { DUMMY_PASSWORD } from '@/lib/constants';
 import type { DefaultJWT } from 'next-auth/jwt';
 
 export type UserType = 'guest' | 'regular';
-export type UserRole = 'user' | 'admin';
+export type UserRole = 'admin' | 'user';
 
 declare module 'next-auth' {
   interface Session extends DefaultSession {
     user: {
       id: string;
       type: UserType;
-      role: UserRole;
+      role?: UserRole;
     } & DefaultSession['user'];
   }
 
@@ -30,7 +30,7 @@ declare module 'next-auth/jwt' {
   interface JWT extends DefaultJWT {
     id: string;
     type: UserType;
-    role: UserRole;
+    role?: UserRole;
   }
 }
 
@@ -45,33 +45,54 @@ export const {
     Credentials({
       credentials: {},
       async authorize({ email, password }: any) {
-        const users = await getUser(email);
+        console.log('Authorize called with email:', email);
 
-        if (users.length === 0) {
-          await compare(password, DUMMY_PASSWORD);
-          return null;
+        try {
+          const users = await getUser(email);
+          console.log('Users found:', users.length);
+
+          if (users.length === 0) {
+            console.log('User not found, comparing with dummy password');
+            await compare(password, DUMMY_PASSWORD);
+            return null;
+          }
+
+          const [user] = users;
+
+          if (!user.password) {
+            console.log('User has no password, comparing with dummy password');
+            await compare(password, DUMMY_PASSWORD);
+            return null;
+          }
+
+          console.log('Comparing passwords');
+          console.log('User password hash length:', user.password.length);
+          const passwordsMatch = await compare(password, user.password);
+          console.log('Passwords match:', passwordsMatch);
+
+          if (!passwordsMatch) return null;
+
+          console.log('Login successful for user:', user.email);
+          return { ...user, type: 'regular' };
+        } catch (error) {
+          console.error('Error in authorize function:', error);
+          throw error;
         }
-
-        const [user] = users;
-
-        if (!user.password) {
-          await compare(password, DUMMY_PASSWORD);
-          return null;
-        }
-
-        const passwordsMatch = await compare(password, user.password);
-
-        if (!passwordsMatch) return null;
-
-        return { ...user, type: 'regular', role: user.role || 'user' };
       },
     }),
     Credentials({
       id: 'guest',
       credentials: {},
       async authorize() {
-        const [guestUser] = await createGuestUser();
-        return { ...guestUser, type: 'guest', role: 'user' };
+        try {
+          console.log('Guest authorize function called');
+          const [guestUser] = await createGuestUser();
+          console.log('Guest user created:', guestUser.email);
+          return { ...guestUser, type: 'guest' };
+        } catch (error) {
+          console.error('Error creating guest user:', error);
+          throw error;
+        }
       },
     }),
   ],
@@ -80,7 +101,7 @@ export const {
       if (user) {
         token.id = user.id as string;
         token.type = user.type;
-        token.role = user.role || 'user';
+        token.role = user.role;
       }
 
       return token;

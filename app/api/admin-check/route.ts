@@ -6,18 +6,12 @@ export async function GET() {
     const session = await auth();
 
     // Return session and admin status
-    return NextResponse.json({
-      authenticated: !!session,
-      user: session?.user
-        ? {
-            id: session.user.id,
-            email: session.user.email,
-            role: session.user.role,
-            type: session.user.type,
-          }
-        : null,
-      isAdmin: session?.user?.role === 'admin',
-    });
+    const response = {
+      isAuthenticated: !!session,
+      isAdmin: (session?.user as { role?: string })?.role === 'admin',
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Admin check error:', error);
     return NextResponse.json(

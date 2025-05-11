@@ -19,6 +19,8 @@ import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import type { UseChatHelpers } from '@ai-sdk/react';
+import { MessageWithSearch } from './message-with-search';
+import { WebSearchResults } from './web-search-results';
 
 const PurePreviewMessage = ({
   chatId,
@@ -212,6 +214,17 @@ const PurePreviewMessage = ({
                           result={result}
                           isReadonly={isReadonly}
                         />
+                      ) : toolName === 'braveSearch' ? (
+                        <div className="mb-2">
+                          {result.links && result.links.length > 0 && (
+                            <div className="message-web-search">
+                              <WebSearchResults
+                                results={result.links}
+                                query={result.query}
+                              />
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <pre>{JSON.stringify(result, null, 2)}</pre>
                       )}

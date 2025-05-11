@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useState } from 'react';
+import { useFormState } from 'react-dom';
+import { useEffect, useState } from 'react';
 import { toast } from '@/components/toast';
 
 import { AuthForm } from '@/components/auth-form';
@@ -16,36 +17,64 @@ export default function Page() {
 
   const [email, setEmail] = useState('');
   const [isSuccessful, setIsSuccessful] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [state, formAction] = useActionState<LoginActionState, FormData>(
-    login,
-    {
-      status: 'idle',
-    },
-  );
+  const [state, formAction] = useFormState<LoginActionState, FormData>(login, {
+    status: 'idle',
+  });
 
   const { update: updateSession } = useSession();
 
   useEffect(() => {
+    console.log('Login state changed:', state.status, state.error);
+
     if (state.status === 'failed') {
+      setIsSubmitting(false);
+      console.error('Authentication failed:', state.error);
       toast({
         type: 'error',
-        description: 'Invalid credentials!',
+        description: state.error || 'Invalid credentials!',
       });
     } else if (state.status === 'invalid_data') {
+      setIsSubmitting(false);
+      console.error('Invalid data submitted:', state.error);
       toast({
         type: 'error',
-        description: 'Failed validating your submission!',
+        description: state.error || 'Failed validating your submission!',
       });
     } else if (state.status === 'success') {
+      console.log('Authentication successful');
       setIsSuccessful(true);
+
+      console.log('Updating session...');
       updateSession();
-      router.refresh();
+      console.log('Session update called');
+
+      // Add a delay to ensure session is updated before navigation
+      console.log('Setting timeout for navigation...');
+      setTimeout(() => {
+        console.log('Navigating to home page...');
+        router.push('/');
+      }, 1000); // Increased timeout for more reliable session update
     }
-  }, [state.status]);
+  }, [state.status, state.error, router, updateSession]);
 
   const handleSubmit = (formData: FormData) => {
+    console.log('Submitting login form with email:', formData.get('email'));
+
+    // Debug credentials
+    console.log('Email:', formData.get('email'));
+    console.log(
+      'Password length:',
+      formData.get('password')
+        ? (formData.get('password') as string).length
+        : 'No password',
+    );
+
     setEmail(formData.get('email') as string);
+    setIsSubmitting(true);
+
+    console.log('Calling form action...');
     formAction(formData);
   };
 
@@ -59,17 +88,9 @@ export default function Page() {
           </p>
         </div>
         <AuthForm action={handleSubmit} defaultEmail={email}>
-          <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
-          <p className="text-center text-sm text-gray-600 mt-4 dark:text-zinc-400">
-            {"Don't have an account? "}
-            <Link
-              href="/register"
-              className="font-semibold text-gray-800 hover:underline dark:text-zinc-200"
-            >
-              Sign up
-            </Link>
-            {' for free.'}
-          </p>
+          <SubmitButton isSuccessful={isSuccessful}>
+            {isSubmitting ? 'Signing in...' : 'Sign in'}
+          </SubmitButton>
         </AuthForm>
       </div>
     </div>

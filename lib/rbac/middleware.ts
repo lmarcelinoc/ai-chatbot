@@ -18,10 +18,12 @@ export async function requireRole(requiredRole: UserRole) {
     redirect('/login');
   }
 
+  const userWithRole = session.user as { role?: UserRole };
+
   // User doesn't have the required role
   if (
-    session.user.role !== requiredRole &&
-    !(requiredRole === 'user' && session.user.role === 'admin')
+    userWithRole.role !== requiredRole &&
+    !(requiredRole === 'user' && userWithRole.role === 'admin')
   ) {
     // Admins can access user routes, but users cannot access admin routes
     redirect('/');
@@ -29,12 +31,16 @@ export async function requireRole(requiredRole: UserRole) {
 }
 
 /**
- * Check if the current user has admin access
- * @returns Boolean indicating if the user has admin access
+ * Check if the current user is an admin
  */
 export async function isAdmin(): Promise<boolean> {
-  const session = await auth();
-  return session?.user?.role === 'admin' || false;
+  try {
+    const session = await auth();
+    return (session?.user as { role?: UserRole })?.role === 'admin' || false;
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
 }
 
 /**

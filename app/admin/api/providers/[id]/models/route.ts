@@ -11,7 +11,7 @@ import { auth } from '@/app/(auth)/auth';
 // Helper to check if the current user is an admin
 async function isAdmin() {
   const session = await auth();
-  return session?.user?.role === 'admin';
+  return (session?.user as { role?: string })?.role === 'admin';
 }
 
 // GET /admin/api/providers/[id]/models - Get all models for a provider

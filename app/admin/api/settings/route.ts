@@ -7,7 +7,7 @@ import type { SystemSettings } from '@/lib/db/schema';
 // Helper to check if the current user is an admin
 async function isAdmin() {
   const session = await auth();
-  return session?.user?.role === 'admin';
+  return (session?.user as { role?: string })?.role === 'admin';
 }
 
 // Interface for settings response
@@ -87,7 +87,8 @@ export async function PUT(request: Request) {
       );
     }
 
-    const { allowGuestUsers, allowRegistration, braveSearchApiKey } = await request.json();
+    const { allowGuestUsers, allowRegistration, braveSearchApiKey } =
+      await request.json();
 
     // Validate inputs
     if (

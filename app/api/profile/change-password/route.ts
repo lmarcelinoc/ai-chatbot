@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { auth } from '@/app/(auth)/auth';
 import { changeUserPassword } from '@/lib/db/queries';
 import { NextResponse } from 'next/server';

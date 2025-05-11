@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useState } from 'react';
+import { useFormState } from 'react-dom';
+import { useEffect, useState } from 'react';
 
 import { AuthForm } from '@/components/auth-form';
 import { SubmitButton } from '@/components/submit-button';
@@ -40,7 +41,7 @@ export default function Page() {
     checkRegistrationStatus();
   }, []);
 
-  const [state, formAction] = useActionState<RegisterActionState, FormData>(
+  const [state, formAction] = useFormState<RegisterActionState, FormData>(
     register,
     {
       status: 'idle',
@@ -64,9 +65,13 @@ export default function Page() {
 
       setIsSuccessful(true);
       updateSession();
-      router.refresh();
+
+      // Add a delay to ensure session is updated before navigation
+      setTimeout(() => {
+        router.push('/');
+      }, 500);
     }
-  }, [state]);
+  }, [state, router, updateSession]);
 
   const handleSubmit = (formData: FormData) => {
     setEmail(formData.get('email') as string);

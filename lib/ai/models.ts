@@ -1,3 +1,5 @@
+import type { LanguageModelV1 } from 'ai';
+
 export const DEFAULT_CHAT_MODEL: string = 'openai-gpt4o';
 
 export interface ChatModel {
@@ -31,7 +33,7 @@ export const chatModels: Array<ChatModel> = [
     provider: 'openai',
     modelId: 'gpt-4o',
   },
-  
+
   // xAI models
   {
     id: 'xai-grok2',
@@ -58,8 +60,9 @@ export const chatModels: Array<ChatModel> = [
 
 // Helper function to get the model's provider
 export function getModelProvider(modelId: string): 'openai' | 'xai' {
-  const model = chatModels.find(m => m.id === modelId);
-  return model?.provider || 'openai';
+  const model = chatModels.find((m) => m.id === modelId);
+  if (!model) return 'openai';
+  return model.provider;
 }
 
 // Define image models for each provider
@@ -77,11 +80,42 @@ export const imageModels: Record<'openai' | 'xai', ImageModel> = {
     provider: 'openai',
     modelId: 'dall-e-3',
     size: '1024x1024',
-    quality: 'standard'
+    quality: 'standard',
   },
   xai: {
     id: 'xai-grok2-image',
     provider: 'xai',
-    modelId: 'grok-2-image'
-  }
+    modelId: 'grok-2-image',
+  },
 };
+
+// Safe mock implementation that doesn't use test utilities
+export const createSafeMockModel = (modelName: string): LanguageModelV1 => {
+  // Cast to unknown first then to LanguageModelV1 to avoid type checking issues
+  return {
+    version: 'v1',
+    specificationVersion: 'v1',
+    provider: 'openai',
+    modelId: modelName,
+    id: modelName,
+    defaultObjectGenerationMode: 'json',
+    supportedFeatures: {
+      tools: false,
+      vision: false,
+    },
+    generate: async () => ({
+      text: `Mock response from ${modelName}`,
+      usage: { promptTokens: 10, completionTokens: 20 },
+      finishReason: 'stop',
+    }),
+    stream: async () => {
+      throw new Error('Stream not implemented in safe mock model');
+    },
+  } as unknown as LanguageModelV1;
+};
+
+// Export safe mock models for testing
+export const safeChatModel = createSafeMockModel('chat-model');
+export const safeReasoningModel = createSafeMockModel('reasoning-model');
+export const safeTitleModel = createSafeMockModel('title-model');
+export const safeArtifactModel = createSafeMockModel('artifact-model');

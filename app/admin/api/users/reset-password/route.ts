@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import 'server-only';
 import { NextResponse } from 'next/server';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -71,7 +72,7 @@ function generateTemporaryPassword(): string {
 // Helper to check if the current user is an admin
 async function isAdmin() {
   const session = await auth();
-  return session?.user?.role === 'admin';
+  return (session?.user as { role?: string })?.role === 'admin';
 }
 
 // POST /admin/api/users/reset-password - Reset a user's password

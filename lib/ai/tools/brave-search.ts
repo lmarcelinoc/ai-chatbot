@@ -4,17 +4,7 @@ import { tool } from 'ai';
 
 // Brave Search API documentation: https://brave.com/search/api/
 
-// Schema for Brave Search parameters
-export const braveSearchSchema = z.object({
-  query: z.string().describe('The search query to look up information online'),
-  count: z
-    .number()
-    .optional()
-    .describe('Number of results to return (default: 5)'),
-});
-
-// Brave Search API function
-async function performBraveSearch({
+export async function performBraveSearch({
   query,
   count = 5,
 }: {
@@ -68,33 +58,63 @@ async function performBraveSearch({
     const results = data.web?.results || [];
 
     return {
-      results: results.map((result: any) => ({
+      links: results.map((result: any) => ({
         title: result.title,
         url: result.url,
         description: result.description,
       })),
-      query,
+      query: query,
+      content: `Web search results for "${query}"`,
     };
   } catch (error) {
     console.error('Error in Brave search:', error);
     return {
-      results: [],
+      links: [],
+      query: query,
       error:
         error instanceof Error ? error.message : 'Unknown error during search',
-      query,
+      content: `Error searching the web: ${error instanceof Error ? error.message : 'Unknown error'}`,
     };
   }
 }
 
-// Define the Brave Search tool using the AI SDK's tool function
+/**
+ * Formats search results in a human-readable markdown format
+ */
+function formatSearchResults(query: string, results: any[]) {
+  if (!results || results.length === 0) {
+    return "I couldn't find any relevant results for your query.";
+  }
+
+  // Create a user-friendly formatted response with markdown
+  return `## Web Search Results for "${query}"
+
+${results
+  .map((result, index) => {
+    return `### ${index + 1}. ${result.title}
+
+${result.description}
+
+**Source:** [${new URL(result.url).hostname}](${result.url})
+`;
+  })
+  .join('\n')}
+
+*Results provided by Brave Search*`;
+}
+
+// Schema for Brave Search parameters
+export const braveSearchSchema = z.object({
+  query: z.string().describe('The search query to look up information online'),
+  count: z
+    .number()
+    .optional()
+    .describe('Number of results to return (default: 5)'),
+});
+
+// Export the tool for use with AI SDK
 export const braveSearch = tool({
-  description: 'Search the web for information using Brave Search API',
-  parameters: z.object({
-    query: z.string().describe('The search query to look up information online'),
-    count: z
-      .number()
-      .optional()
-      .describe('Number of results to return (default: 5)'),
-  }),
+  description: 'Search the web for real-time information about any topic',
+  parameters: braveSearchSchema,
   execute: performBraveSearch,
-}); 
+});
