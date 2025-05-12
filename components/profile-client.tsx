@@ -40,7 +40,7 @@ export function ProfileClient({ user }: ProfileClientProps) {
           <div className="p-6 border rounded-lg bg-card">
             <h3 className="text-xl font-semibold mb-4">API Key Management</h3>
             <p className="text-muted-foreground">
-              This feature is coming soon. You'll be able to manage API keys for programmatic access.
+              This feature is coming soon. You&apos;ll be able to manage API keys for programmatic access.
             </p>
           </div>
         </TabsContent>

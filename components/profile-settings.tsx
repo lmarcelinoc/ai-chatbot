@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -90,12 +90,8 @@ export function ProfileSettings() {
     return '0.7';
   };
 
-  // Fetch user settings on component mount
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  async function fetchSettings() {
+  // Define fetchSettings with useCallback to avoid dependency loop
+  const fetchSettings = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/profile/settings');
@@ -162,7 +158,12 @@ export function ProfileSettings() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [setValue]);
+
+  // Fetch user settings on component mount
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   async function onSubmit(rawData: SettingsFormRaw) {
     setIsLoading(true);
@@ -175,8 +176,11 @@ export function ProfileSettings() {
           : Number.parseFloat(String(rawData.temperature)) || 0.7,
     };
 
-    // Convert optional fields, omitting empty strings
-    if (rawData.maxTokens && rawData.maxTokens !== '') {
+    // Convert optional fields, ensuring we only process defined/non-empty values
+    if (
+      typeof rawData.maxTokens === 'number' ||
+      (typeof rawData.maxTokens === 'string' && rawData.maxTokens !== '')
+    ) {
       const value =
         typeof rawData.maxTokens === 'string'
           ? Number(rawData.maxTokens)
@@ -184,13 +188,19 @@ export function ProfileSettings() {
       data.maxTokens = value;
     }
 
-    if (rawData.topP && rawData.topP !== '') {
+    if (
+      typeof rawData.topP === 'number' ||
+      (typeof rawData.topP === 'string' && rawData.topP !== '')
+    ) {
       const value =
         typeof rawData.topP === 'string' ? Number(rawData.topP) : rawData.topP;
       data.topP = value;
     }
 
-    if (rawData.frequencyPenalty && rawData.frequencyPenalty !== '') {
+    if (
+      typeof rawData.frequencyPenalty === 'number' ||
+      (typeof rawData.frequencyPenalty === 'string' && rawData.frequencyPenalty !== '')
+    ) {
       const value =
         typeof rawData.frequencyPenalty === 'string'
           ? Number(rawData.frequencyPenalty)
@@ -198,7 +208,10 @@ export function ProfileSettings() {
       data.frequencyPenalty = value;
     }
 
-    if (rawData.presencePenalty && rawData.presencePenalty !== '') {
+    if (
+      typeof rawData.presencePenalty === 'number' ||
+      (typeof rawData.presencePenalty === 'string' && rawData.presencePenalty !== '')
+    ) {
       const value =
         typeof rawData.presencePenalty === 'string'
           ? Number(rawData.presencePenalty)

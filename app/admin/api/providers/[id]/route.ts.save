@@ -1,5 +1,15 @@
-import 'server-only';
-import { NextResponse, type NextRequest } from 'next/server';
+q
+sed -i 's/{ params }: { params: { id: string } }/context: { params: Promise<{ id: string }> }/' app/admin/api/providers/\[id\]/route.ts
+q
+echo "import 'server-only'; import { NextResponse } from 'next/server'; import { getProviderById, updateProvider } from '@/lib/db/queries'; import { auth } from '@/app/(auth)/auth';" > app/admin/api/providers/\[id\]/route.ts
+q
+cat app/admin/api/providers/\[id\]/route.ts
+q
+cd app/admin/api/providers/\[id\] && mv route.ts route.ts.bak
+q
+cp app/admin/api/providers/models/\[id\]/route.ts app/admin/api/providers/\[id\]/route.ts.fixed
+t 'server-only';
+import { NextResponse } from 'next/server';
 import { getProviderById, updateProvider } from '@/lib/db/queries';
 import { auth } from '@/app/(auth)/auth';
 
@@ -11,8 +21,8 @@ async function isAdmin() {
 
 // GET /admin/api/providers/[id] - Get a provider by ID
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  request: Request,
+  context: { params: { id: string } },
 ) {
   try {
     // Check if user is admin
@@ -23,7 +33,7 @@ export async function GET(
       );
     }
 
-    const { id: providerId } = await params;
+    const { id: providerId } = context.params;
     const provider = await getProviderById(providerId);
 
     if (!provider) {
@@ -45,8 +55,8 @@ export async function GET(
 
 // PATCH /admin/api/providers/[id] - Update a provider
 export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  request: Request,
+  context: { params: { id: string } },
 ) {
   try {
     // Check if user is admin
@@ -57,7 +67,7 @@ export async function PATCH(
       );
     }
 
-    const { id: providerId } = await params;
+    const { id: providerId } = context.params;
     const provider = await getProviderById(providerId);
 
     if (!provider) {

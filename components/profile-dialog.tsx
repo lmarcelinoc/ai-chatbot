@@ -63,7 +63,7 @@ export function ProfileDialog({ user, isOpen, onClose }: ProfileDialogProps) {
                   API Key Management
                 </h3>
                 <p className="text-muted-foreground">
-                  This feature is coming soon. You'll be able to manage API keys
+                  This feature is coming soon. You&apos;ll be able to manage API keys
                   for programmatic access.
                 </p>
               </div>

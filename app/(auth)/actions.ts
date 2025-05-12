@@ -28,7 +28,7 @@ export const login = async (
     await signIn('credentials', {
       email: validatedData.email,
       password: validatedData.password,
-      redirect: false,
+      redirectTo: '/',
     });
 
     return { status: 'success' };
@@ -70,7 +70,7 @@ export const register = async (
     await signIn('credentials', {
       email: validatedData.email,
       password: validatedData.password,
-      redirect: false,
+      redirectTo: '/',
     });
 
     return { status: 'success' };

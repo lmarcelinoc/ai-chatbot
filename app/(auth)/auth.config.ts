@@ -10,4 +10,8 @@ export const authConfig = {
     // while this file is also used in non-Node.js environments
   ],
   callbacks: {},
+  // Allow localhost and other non-production hosts during development/testing.
+  // Vercel automatically sets this in production, but adding it here ensures
+  // `next start` works locally without needing extra env vars.
+  trustHost: true,
 } satisfies NextAuthConfig;

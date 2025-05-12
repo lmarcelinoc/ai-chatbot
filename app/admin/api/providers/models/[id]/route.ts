@@ -1,5 +1,5 @@
 import 'server-only';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { updateProviderModel } from '@/lib/db/queries';
 import { auth } from '@/app/(auth)/auth';
 
@@ -11,8 +11,8 @@ async function isAdmin() {
 
 // PATCH /admin/api/providers/models/[id] - Update a model
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } },
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Check if user is admin
@@ -23,7 +23,7 @@ export async function PATCH(
       );
     }
 
-    const { id: modelId } = params;
+    const { id: modelId } = await params;
     const updates = await request.json();
 
     // Validate updates

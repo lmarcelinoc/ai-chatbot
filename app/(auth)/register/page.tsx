@@ -66,7 +66,7 @@ export default function Page() {
       updateSession();
       router.refresh();
     }
-  }, [state]);
+  }, [state, router, updateSession]);
 
   const handleSubmit = (formData: FormData) => {
     setEmail(formData.get('email') as string);
@@ -79,7 +79,7 @@ export default function Page() {
       <div className="flex h-dvh w-screen items-center justify-center bg-background">
         <div className="w-full max-w-md overflow-hidden rounded-2xl gap-6 flex flex-col p-4">
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <AlertCircle className="size-4" />
             <AlertTitle>Registration Disabled</AlertTitle>
             <AlertDescription>
               New user registration is currently disabled. Please contact an
