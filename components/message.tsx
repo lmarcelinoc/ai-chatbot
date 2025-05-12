@@ -19,6 +19,7 @@ import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import type { UseChatHelpers } from '@ai-sdk/react';
+import { WebSearchResults, type SearchResultItem } from './web-search-results';
 
 const PurePreviewMessage = ({
   chatId,
@@ -212,6 +213,16 @@ const PurePreviewMessage = ({
                           result={result}
                           isReadonly={isReadonly}
                         />
+                      ) : toolName === 'braveSearch' ? (
+                        // Handle Brave Search results
+                        result.links && result.query ? (
+                          <WebSearchResults 
+                            results={result.links as SearchResultItem[]} 
+                            query={result.query as string} 
+                          />
+                        ) : (
+                          <pre>{JSON.stringify(result, null, 2)}</pre>
+                        )
                       ) : (
                         <pre>{JSON.stringify(result, null, 2)}</pre>
                       )}
@@ -252,34 +263,15 @@ export const PreviewMessage = memo(
 );
 
 export const ThinkingMessage = () => {
-  const role = 'assistant';
-
   return (
-    <motion.div
-      data-testid="message-assistant-loading"
-      className="w-full mx-auto max-w-3xl px-4 group/message min-h-96"
-      initial={{ y: 5, opacity: 0 }}
-      animate={{ y: 0, opacity: 1, transition: { delay: 1 } }}
-      data-role={role}
-    >
-      <div
-        className={cx(
-          'flex gap-4 group-data-[role=user]/message:px-3 w-full group-data-[role=user]/message:w-fit group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl group-data-[role=user]/message:py-2 rounded-xl',
-          {
-            'group-data-[role=user]/message:bg-muted': true,
-          },
-        )}
-      >
-        <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border">
-          <SparklesIcon size={14} />
-        </div>
-
-        <div className="flex flex-col gap-2 w-full">
-          <div className="flex flex-col gap-4 text-muted-foreground">
-            Hmm...
-          </div>
-        </div>
+    <div className="flex flex-row mx-auto max-w-3xl px-4 gap-4">
+      <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background relative">
+        <div className="size-1 bg-muted-foreground rounded-full dot absolute top-0 right-0 animate-bounce" />
       </div>
-    </motion.div>
+
+      <div className="flex-1 text-sm text-muted-foreground animate-pulse">
+        Thinking...
+      </div>
+    </div>
   );
 };
