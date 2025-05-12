@@ -11,6 +11,7 @@ const authFormSchema = z.object({
   password: z.string().min(6),
 });
 
+/* Commenting out the login server action as it's replaced by an API route
 export interface LoginActionState {
   status: 'idle' | 'in_progress' | 'success' | 'failed' | 'invalid_data';
 }
@@ -25,21 +26,31 @@ export const login = async (
       password: formData.get('password'),
     });
 
+    // Use redirect: false and handle redirect on client
     await signIn('credentials', {
       email: validatedData.email,
       password: validatedData.password,
-      redirectTo: '/',
+      redirect: false, 
     });
 
     return { status: 'success' };
   } catch (error) {
+    // Check specifically for CredentialsSignin error from NextAuth
+    if (error instanceof Error && error.message.includes('CredentialsSignin')) {
+      console.error('Login action failed: Invalid credentials');
+      return { status: 'failed' }; 
+    }
+    // Handle Zod validation errors
     if (error instanceof z.ZodError) {
+      console.error('Login action failed: Invalid data');
       return { status: 'invalid_data' };
     }
-
+    // Handle other unexpected errors
+    console.error('Login action failed:', error);
     return { status: 'failed' };
   }
 };
+*/
 
 export interface RegisterActionState {
   status:
@@ -70,7 +81,7 @@ export const register = async (
     await signIn('credentials', {
       email: validatedData.email,
       password: validatedData.password,
-      redirectTo: '/',
+      redirect: false,
     });
 
     return { status: 'success' };

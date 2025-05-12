@@ -5,7 +5,7 @@ import postgres from 'postgres';
 import { eq } from 'drizzle-orm';
 import { user } from '@/lib/db/schema';
 import { auth } from '@/app/(auth)/auth';
-import { hash } from 'bcrypt';
+import { hash } from 'bcrypt-ts';
 
 // Setup database connection
 // biome-ignore lint: Forbidden non-null assertion.

@@ -5,6 +5,7 @@ import { createGuestUser, getUser } from '@/lib/db/queries';
 import { authConfig } from './auth.config';
 import { DUMMY_PASSWORD } from '@/lib/constants';
 import type { DefaultJWT } from 'next-auth/jwt';
+import { isDevelopmentEnvironment } from '@/lib/constants';
 
 export type UserType = 'guest' | 'regular';
 export type UserRole = 'user' | 'admin';
@@ -45,6 +46,17 @@ export const {
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  cookies: {
+    sessionToken: {
+      name: `${isDevelopmentEnvironment ? '' : '__Secure-'}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: !isDevelopmentEnvironment,
+      },
+    },
   },
   providers: [
     Credentials({

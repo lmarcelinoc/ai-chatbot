@@ -1,11 +1,8 @@
-import { Toaster } from 'sonner';
-import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { ThemeProvider } from '@/components/theme-provider';
+import { Providers } from './providers';
+import type { Metadata } from 'next';
 
 import './globals.css';
-import { SessionProvider } from 'next-auth/react';
-import { SettingsSync } from '@/components/settings-sync';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://chat.vercel.ai'),
@@ -72,18 +69,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <Toaster position="top-center" />
-          <SessionProvider>
-            <SettingsSync />
-            {children}
-          </SessionProvider>
-        </ThemeProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

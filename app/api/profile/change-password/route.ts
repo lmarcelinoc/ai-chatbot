@@ -1,7 +1,7 @@
 import { auth } from '@/app/(auth)/auth';
 import { changeUserPassword } from '@/lib/db/queries';
 import { NextResponse } from 'next/server';
-import { compare } from 'bcrypt';
+import { compare } from 'bcrypt-ts';
 import { z } from 'zod';
 
 export async function POST(req: Request) {
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     });
 
     const { currentPassword, newPassword } = passwordSchema.parse(body);
-    
+
     // TODO: Validate the current password, but for now we'll skip this since
     // the db doesn't store plaintext passwords to compare against
 
@@ -32,14 +32,14 @@ export async function POST(req: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation error', details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    
+
     console.error('Error changing password:', error);
     return NextResponse.json(
       { error: 'Failed to change password' },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

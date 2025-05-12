@@ -1,9 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { guestRegex, isDevelopmentEnvironment } from './lib/constants';
+import { guestRegex } from './lib/constants';
 
 // Public routes that are always accessible
 const publicRoutes = ['/login', '/register', '/api/auth', '/ping'];
+
+// API routes that should be publicly accessible for auth operations
+const publicApiRoutes = ['/api/auth', '/api/login', '/api/register'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -16,21 +19,25 @@ export async function middleware(request: NextRequest) {
     return new Response('pong', { status: 200 });
   }
 
-  // Allow authentication endpoints
-  if (pathname.startsWith('/api/auth')) {
+  // Allow explicitly public API routes (auth, login, etc.)
+  if (publicApiRoutes.some((prefix) => pathname.startsWith(prefix))) {
     return NextResponse.next();
   }
 
-  // Always allow access to login and register pages
+  // Allow explicitly public pages (login, register)
   if (pathname === '/login' || pathname === '/register') {
     return NextResponse.next();
   }
 
   // Get authentication token
+  const secureCookie =
+    request.headers.get('x-forwarded-proto') === 'https' ||
+    request.url.startsWith('https://');
+
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
+    secureCookie,
   });
 
   // Read guest access setting from cookie
